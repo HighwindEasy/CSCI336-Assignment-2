@@ -9,154 +9,213 @@ static void init(GLFWwindow* window)
 	glEnable(GL_DEPTH_TEST);	// enable depth buffer test
 
 	// compile and link a vertex and fragment shader pair
-	gShader.compileAndLink("lighting.vert", "lighting_cubemap.frag");
+	gShader.compileAndLink("lighting.vert", "reflection.frag");
+	Cube_envm_Map_Program.compileAndLink("lighting.vert", "lighting_cubemap.frag");
+	Floor_ShaderProgram.compileAndLink("lightingAndTexture.vert", "pointLightTexture.frag");
 
 	// initialise view matrix
-	gViewMatrix["Right"] = glm::lookAt(glm::vec3(0.0f, 2.0f, 4.0f),
-		glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-	gViewMatrix["Top"] = glm::lookAt(glm::vec3(0.0f, 15.0f, 0.f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f));
+	gCamera.setViewMatrix(glm::vec3(0.0f, 2.0f, 4.0f),
+		glm::vec3(0.0f, 0.0f, 0.0f));
 
 	// initialise projection matrix
-	gProjectionMatrix["Left"] = glm::ortho(-2.f, 2.f, -2.f, 2.f, -.2f, 10.f);
-	gProjectionMatrix["Right"] = glm::perspective(glm::radians(45.f), 1.f, 0.1f, 10.0f);
-	gProjectionMatrix["Top"] = glm::ortho(-5.f, 5.f, -5.f, 5.f, .1f, 50.f);
-
-	gProjectionMatrix["Main"] = glm::ortho(0.0f, static_cast<float>(gWindowWidth), 0.0f, static_cast<float>(gWindowHeight), 0.1f, 10.0f);
+	gCamera.setProjMatrix(glm::perspective(glm::radians(45.0f),
+		static_cast<float>(gWindowWidth) / gWindowHeight, 0.1f, 10.0f));
 
 	// initialise directional light properties
 	gLight.dir = glm::vec3(0.3f, -0.7f, -0.5f);
-	gLight.La = glm::vec3(0.3f);
+	gLight.La = glm::vec3(0.8f);
 	gLight.Ld = glm::vec3(1.0f);
 	gLight.Ls = glm::vec3(1.0f);
+	gLight.att = glm::vec3(1.0f, 0.f, 0.f);
 
 	// initialise material properties
-	gMaterial.Ka = glm::vec3(0.2f);
-	gMaterial.Kd = glm::vec3(0.2f, 0.7f, 1.0f);
-	gMaterial.Ks = glm::vec3(0.2f, 0.7f, 1.0f);
-	gMaterial.shininess = 40.0f;
+	gMaterial["Floor"].Ka = glm::vec3(0.2f);
+	gMaterial["Floor"].Kd = glm::vec3(0.2f, 0.7f, 1.0f);
+	gMaterial["Floor"].Ks = glm::vec3(0.2f, 0.7f, 1.0f);
+	gMaterial["Floor"].shininess = 40.0f;
+
+	gMaterial["Cube"].Ka = glm::vec3(0.2f);
+	gMaterial["Cube"].Kd = glm::vec3(1.0f, 0.7f, 0.2f);
+	gMaterial["Cube"].Ks = glm::vec3(1.0f, 0.7f, 0.2f);
+	gMaterial["Cube"].shininess = 10.0f;
 
 	// initialise model matrices
-	gModelMatrix = glm::mat4(1.0f);
+	gModelMatrix["Floor"] = glm::mat4(1.0f);
+	gModelMatrix["Cube"] = glm::translate(glm::vec3(-1.0f, 0.5f, 0.0f)) * glm::scale(glm::vec3(0.5f, 0.5f, 0.5f));
 
-	// load cube environment map texture
-	gCubeEnvMap.generate(
+	// load model
+	gModel.loadModel("./models/cube.obj");
+
+	//Generate unused VBO and VAO identifiers
+	glGenBuffers(index_for_VBO_VAO, gVBO);
+	glGenVertexArrays(index_for_VBO_VAO, gVAO);
+
+
+	/* Cube environment mapping stuff here */
+
+	Cube_Material.Ka = glm::vec3(0.2f);
+	Cube_Material.Kd = glm::vec3(0.2f, 0.7f, 1.0f);
+	Cube_Material.Ks = glm::vec3(0.2f, 0.7f, 1.0f);
+	Cube_Material.shininess = 40.0f;
+
+	//Initialising model matrices
+	Cube_ModelMatrix = glm::mat4(1.f);
+	//Load cube envm map texture
+	Cube_envm_Map.generate(
 		"./images/cm_front.bmp", "./images/cm_back.bmp",
 		"./images/cm_left.bmp", "./images/cm_right.bmp",
 		"./images/cm_top.bmp", "./images/cm_bottom.bmp");
+	Cube_Model.loadModel("./models/torus.obj");
 
-	// load model
-	gModel.loadModel("./models/torus.obj");
-	
+	/* Cube Environment map ends here */
+
+	/* Floor stuff Starts here */
+
+	Floor_ModelMatrix = glm::mat4(1.f);
+
+	Floor_Material.Ka = glm::vec3(0.25f, 0.21f, 0.21f);
+	Floor_Material.Kd = glm::vec3(1.0f, 0.83f, 0.83f);
+	Floor_Material.Ks = glm::vec3(0.3f, 0.3f, 0.3f);
+	Floor_Material.shininess = 11.3f;
+
+	Floor_Texture.generate("./images/check.bmp");
+
+	glBindBuffer(GL_ARRAY_BUFFER, gVBO[0]);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * Floor_Vertices.size(), &Floor_Vertices[0], GL_STATIC_DRAW);
+	glBindVertexArray(gVAO[0]);
+	glBindBuffer(GL_ARRAY_BUFFER, gVBO[0]);
+
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(VertexNormTex),
+		reinterpret_cast<void*>(offsetof(VertexNormTex, position)));	// specify format of position data
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(VertexNormTex),
+		reinterpret_cast<void*>(offsetof(VertexNormTex, normal)));		// specify format of colour data
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(VertexNormTex),
+		reinterpret_cast<void*>(offsetof(VertexNormTex, texCoord)));	// specify format of texture coordinate data
+
+	glEnableVertexAttribArray(0);	// enable vertex attributes
+	glEnableVertexAttribArray(1);
+	glEnableVertexAttribArray(2);
+
+	/* Floor Stuff ends here */
+
 }
 
 // function used to update the scene
 static void update_scene(GLFWwindow* window)
 {
-	if (gRotation)
-	{
-		gRotateX += 1;
-	}
+	// stores camera forward/back, up/down and left/right movements
+	float moveForward = 0.0f;
+	float moveRight = 0.0f;
 
-	gViewMatrix["Left"] = glm::lookAt(glm::vec3(0.0f, 0.0f, 3.f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	// update movement variables based on keyboard input
+	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+		moveForward += gCamMoveSensitivity * gFrameTime;
+	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+		moveForward -= gCamMoveSensitivity * gFrameTime;
+	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+		moveRight -= gCamMoveSensitivity * gFrameTime;
+	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+		moveRight += gCamMoveSensitivity * gFrameTime;
 
-	gViewMatrix["Right"] = glm::lookAt(glm::vec3(0.0f, 0.0f, gDistance), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-
-	gViewMatrix["Top"] = glm::lookAt(glm::vec3(-5.0f, 40.0f, 0.f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-
-	//gModelMatrix = gModelMatrix * glm::rotate(glm::radians(90.f), glm::vec3(1.0f, 0.0f, 0.0f));
-	gModelMatrix = glm::rotate(glm::radians(90.f), glm::vec3(1.0f, 0.0f, 0.0f)) * glm::rotate(glm::radians(gRotateX), glm::vec3(0.0f, 0.0f, 1.0f));
+	// update camera position and direction
+	gCamera.update(moveForward, moveRight);
 }
+
+void Draw_Cube_Environment_Map()
+{
+	Cube_envm_Map_Program.use();
+
+	// set light properties
+	Cube_envm_Map_Program.setUniform("uLight.dir", gLight.dir);
+	Cube_envm_Map_Program.setUniform("uLight.La", gLight.La);
+	Cube_envm_Map_Program.setUniform("uLight.Ld", gLight.Ld);
+	Cube_envm_Map_Program.setUniform("uLight.Ls", gLight.Ls);
+
+	// set material properties
+	Cube_envm_Map_Program.setUniform("uMaterial.Ka", Cube_Material.Ka);
+	Cube_envm_Map_Program.setUniform("uMaterial.Kd", Cube_Material.Kd);
+	Cube_envm_Map_Program.setUniform("uMaterial.Ks", Cube_Material.Ks);
+	Cube_envm_Map_Program.setUniform("uMaterial.shininess", Cube_Material.shininess);
+
+	// set viewing position
+	Cube_envm_Map_Program.setUniform("uViewpoint", gCamera.getPosition());
+
+	glm::mat4 MVP = gCamera.getProjMatrix() * gCamera.getViewMatrix() * Cube_ModelMatrix;
+	glm::mat3 normalMatrix = glm::mat3(glm::transpose(glm::inverse(Cube_ModelMatrix)));
+
+	// set uniform variables
+	Cube_envm_Map_Program.setUniform("uModelViewProjectionMatrix", MVP);
+	Cube_envm_Map_Program.setUniform("uModelMatrix", Cube_ModelMatrix);
+	Cube_envm_Map_Program.setUniform("uNormalMatrix", normalMatrix);
+
+	// set cube environment map
+	Cube_envm_Map_Program.setUniform("uEnvironmentMap", 0);
+
+	glActiveTexture(GL_TEXTURE0);
+	Cube_envm_Map.bind();
+
+	// render model
+	Cube_Model.drawModel();
+
+}
+
+void Draw_Floor()
+{
+	Floor_ShaderProgram.use();
+
+	// set light properties
+	Floor_ShaderProgram.setUniform("uLight.pos", gLight.pos);
+	Floor_ShaderProgram.setUniform("uLight.La", gLight.La);
+	Floor_ShaderProgram.setUniform("uLight.Ld", gLight.Ld);
+	Floor_ShaderProgram.setUniform("uLight.Ls", gLight.Ls);
+	Floor_ShaderProgram.setUniform("uLight.att", gLight.att);
+
+	// set material properties
+	Floor_ShaderProgram.setUniform("uMaterial.Ka", Floor_Material.Ka);
+	Floor_ShaderProgram.setUniform("uMaterial.Kd", Floor_Material.Kd);
+	Floor_ShaderProgram.setUniform("uMaterial.Ks", Floor_Material.Ks);
+	Floor_ShaderProgram.setUniform("uMaterial.shininess", Floor_Material.shininess);
+
+	// set viewing position
+	Floor_ShaderProgram.setUniform("uViewpoint", glm::vec3(0.0f, 2.0f, 4.0f));
+
+	// calculate matrices
+	glm::mat4 MVP = gCamera.getProjMatrix() * gCamera.getViewMatrix() * Floor_ModelMatrix;
+	glm::mat3 normalMatrix = glm::mat3(glm::transpose(glm::inverse(Floor_ModelMatrix)));
+
+	// set uniform variables
+	Floor_ShaderProgram.setUniform("uModelViewProjectionMatrix", MVP);
+	Floor_ShaderProgram.setUniform("uModelMatrix", Floor_ModelMatrix);
+	Floor_ShaderProgram.setUniform("uNormalMatrix", normalMatrix);
+
+	// set texture
+	gShader.setUniform("uTextureSampler", 0);
+
+	glActiveTexture(GL_TEXTURE0);
+	Floor_Texture.bind();
+
+	glBindVertexArray(gVAO[0]);				// make VAO active
+	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);	// render the vertices
+}
+
 
 // function to render the scene
 static void render_scene()
 {
-	// clear colour buffer and depth buffer
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-	// use the shaders associated with the shader program
-	gShader.use();
-
-	// set light properties
-	gShader.setUniform("uLight.dir", gLight.dir);
-	gShader.setUniform("uLight.La", gLight.La);
-	gShader.setUniform("uLight.Ld", gLight.Ld);
-	gShader.setUniform("uLight.Ls", gLight.Ls);
-
-	// set material properties
-	gShader.setUniform("uMaterial.Ka", gMaterial.Ka);
-	gShader.setUniform("uMaterial.Kd", gMaterial.Kd);
-	gShader.setUniform("uMaterial.Ks", gMaterial.Ks);
-	gShader.setUniform("uMaterial.shininess", gMaterial.shininess);
-
-	// set viewing position
-	glm::mat4 MVP;
-
-	glViewport(0, 0, 400, 400);
-	// calculate matrices
-	
-	MVP = gProjectionMatrix["Left"] * gViewMatrix["Left"] * gModelMatrix;
-	glm::mat3 normalMatrix = glm::mat3(glm::transpose(glm::inverse(gModelMatrix)));
-
-	// set uniform variables
-	gShader.setUniform("uModelViewProjectionMatrix", MVP);
-	gShader.setUniform("uModelMatrix", gModelMatrix);
-	gShader.setUniform("uNormalMatrix", normalMatrix);
-
-	// set cube environment map
-	gShader.setUniform("uEnvironmentMap", 0);
-
-	glActiveTexture(GL_TEXTURE0);
-	gCubeEnvMap.bind();
-
-	// render model
-	gModel.drawModel();
-
-
-
-
-
-
-
-
+	/************************************************************************************
+	 * Clear colour buffer, depth buffer and stencil buffer
+	 ************************************************************************************/
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
 	glViewport(400, 0, 400, 400);
-	// calculate matrices
-	MVP = gProjectionMatrix["Right"] * gViewMatrix["Right"] * gModelMatrix;
-	normalMatrix = glm::mat3(glm::transpose(glm::inverse(gModelMatrix)));
 
-	// set uniform variables
-	gShader.setUniform("uModelViewProjectionMatrix", MVP);
-	gShader.setUniform("uModelMatrix", gModelMatrix);
-	gShader.setUniform("uNormalMatrix", normalMatrix);
+	/************************************************************************************
+	 * Draw the scene
+	 ************************************************************************************/
+	
 
-	// set cube environment map
-	gShader.setUniform("uEnvironmentMap", 0);
-
-	glActiveTexture(GL_TEXTURE0);
-	gCubeEnvMap.bind();
-
-	// render model
-	gModel.drawModel();
-
-
-	glViewport(400, 400, 400, 400);
-	// calculate matrices
-	MVP = gProjectionMatrix["Top"] * gViewMatrix["Top"] * gModelMatrix;
-	normalMatrix = glm::mat3(glm::transpose(glm::inverse(gModelMatrix)));
-
-	// set uniform variables
-	gShader.setUniform("uModelViewProjectionMatrix", MVP);
-	gShader.setUniform("uModelMatrix", gModelMatrix);
-	gShader.setUniform("uNormalMatrix", normalMatrix);
-
-	// set cube environment map
-	gShader.setUniform("uEnvironmentMap", 0);
-
-	glActiveTexture(GL_TEXTURE0);
-	gCubeEnvMap.bind();
-
-	// render model
-	gModel.drawModel();
+	Draw_Cube_Environment_Map();
+	Draw_Floor();
 
 	// flush the graphics pipeline
 	glFlush();
@@ -179,6 +238,36 @@ static void cursor_position_callback(GLFWwindow* window, double xpos, double ypo
 {
 	// pass cursor position to tweak bar
 	TwEventMousePosGLFW(static_cast<int>(xpos), static_cast<int>(ypos));
+
+	// previous cursor coordinates
+	static glm::vec2 previousPos = glm::vec2(xpos, ypos);
+	static int counter = 0;
+
+	// allow camera rotation when right mouse button held
+	if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS)
+	{
+		// stablise cursor coordinates for 5 updates
+		if (counter < 5)
+		{
+			// set previous cursor coordinates
+			previousPos = glm::vec2(xpos, ypos);
+			counter++;
+		}
+
+		// change based on previous cursor coordinates
+		float deltaYaw = (previousPos.x - xpos) * gCamRotateSensitivity * gFrameTime;
+		float deltaPitch = (previousPos.y - ypos) * gCamRotateSensitivity * gFrameTime;
+
+		// update camera's yaw and pitch
+		gCamera.updateRotation(deltaYaw, deltaPitch);
+
+		// set previous cursor coordinates
+		previousPos = glm::vec2(xpos, ypos);
+	}
+	else
+	{
+		counter = 0;
+	}
 }
 
 // mouse button callback function
@@ -205,7 +294,7 @@ TwBar* create_UI(const std::string name)
 	TwDefine(" TW_HELP visible=false ");	// disable help menu
 	TwDefine(" GLOBAL fontsize=3 ");		// set large font size
 
-	TwDefine(" Main label='User Interface' refresh=0.02 text=light size='250 450' position='10 10' ");
+	TwDefine(" Main label='User Interface' refresh=0.02 text=light size='250 250' position='10 10' ");
 
 	// create frame stat entries
 	TwAddVarRO(twBar, "Frame Rate", TW_TYPE_FLOAT, &gFrameRate, " group='Frame Stats' precision=2 ");
@@ -214,21 +303,13 @@ TwBar* create_UI(const std::string name)
 	// scene controls
 	TwAddVarRW(twBar, "Wireframe", TW_TYPE_BOOLCPP, &gWireframe, " group='Controls' ");
 
-	// object rotation
-	TwAddVarRW(twBar, "Rotation", TW_TYPE_BOOLCPP, &gRotation, " group='Controls' ");
-
 	// light control
-	TwAddVarRW(twBar, "Direction", TW_TYPE_DIR3F, &gLight.dir, " group='Light' opened=true ");
+	TwAddVarRW(twBar, "Position X", TW_TYPE_FLOAT, &gLight.pos.x, " group='Light' min=-3 max=3 step=0.01 ");
+	TwAddVarRW(twBar, "Position Y", TW_TYPE_FLOAT, &gLight.pos.y, " group='Light' min=-3 max=3 step=0.01 ");
+	TwAddVarRW(twBar, "Position Z", TW_TYPE_FLOAT, &gLight.pos.z, " group='Light' min=-3 max=3 step=0.01 ");
 
-	// material controls
-	TwAddVarRW(twBar, "Ka", TW_TYPE_COLOR3F, &gMaterial.Ka, " group='Material' ");
-	TwAddVarRW(twBar, "Kd", TW_TYPE_COLOR3F, &gMaterial.Kd, " group='Material' ");
-	TwAddVarRW(twBar, "Ks", TW_TYPE_COLOR3F, &gMaterial.Ks, " group='Material' ");
-	TwAddVarRW(twBar, "Shininess", TW_TYPE_FLOAT, &gMaterial.shininess, " group='Material' min=1 max=255 step=1 ");
-
-
-	TwAddVarRW(twBar, "Camera Distance", TW_TYPE_FLOAT, &gDistance, " group='Controls' min=1.0 max=10.0 step=0.1 ");
-
+	// reflective amount
+	TwAddVarRW(twBar, "Blend", TW_TYPE_FLOAT, &gAlpha, " group='Reflection' min=0.2 max=1 step=0.01 ");
 
 	return twBar;
 }
@@ -323,6 +404,9 @@ int main(void)
 	}
 
 	// clean up
+	glDeleteBuffers(1, gVBO);
+	glDeleteVertexArrays(1, gVAO);
+
 	// uninitialise tweak bar
 	TwDeleteBar(tweakBar);
 	TwTerminate();

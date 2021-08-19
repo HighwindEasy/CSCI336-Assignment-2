@@ -27,6 +27,9 @@
     <ClCompile Include="Assignment2.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Camera.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ShaderProgram.h">
@@ -47,12 +50,30 @@
     <ClInclude Include="Asssignment2.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Camera.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="lighting.vert">
       <Filter>Resource Files</Filter>
     </None>
     <None Include="lighting_cubemap.frag">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="alphaBlending.frag">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="alphaBlending.vert">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="reflection.frag">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="lightingAndTexture.vert">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="pointLightTexture.frag">
       <Filter>Resource Files</Filter>
     </None>
   </ItemGroup>
