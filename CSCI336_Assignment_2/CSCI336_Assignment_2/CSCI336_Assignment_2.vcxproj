@@ -37,9 +37,13 @@
   <ItemGroup>
     <None Include="alphaBlending.frag" />
     <None Include="alphaBlending.vert" />
+    <None Include="color.frag" />
     <None Include="lighting.vert" />
     <None Include="lightingAndTexture.vert" />
     <None Include="lighting_cubemap.frag" />
+    <None Include="modelViewProj.vert" />
+    <None Include="normalMap.frag" />
+    <None Include="normalMap.vert" />
     <None Include="pointLightTexture.frag" />
     <None Include="reflection.frag" />
   </ItemGroup>

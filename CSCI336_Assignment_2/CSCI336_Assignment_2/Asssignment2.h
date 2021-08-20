@@ -20,7 +20,7 @@ float gFrameTime = 1 / gFrameRate;
 // scene content
 ShaderProgram gShader;	// shader program object
 
-const int index_for_VBO_VAO = 1;
+const int index_for_VBO_VAO = 6;
 GLuint gVBO[index_for_VBO_VAO];		// vertex buffer object identifier
 GLuint gVAO[index_for_VBO_VAO];		// vertex array object identifier
 
@@ -86,7 +86,56 @@ void Draw_Floor();
 
 */
 
+ShaderProgram Walls_Shader_program;
+glm::mat4 Walls_Model_Matrix[4];
+Material Walls_Material;
+std::map<std::string, Texture> Walls_texture;
+
+std::vector<GLfloat> Walls_Vertices =
+{
+	-1.0f, -1.0f, 0.0f,	// vertex 0: position
+	0.0f, 0.0f, 1.0f,	// vertex 0: normal
+	1.0f, 0.0f, 0.0f,	// vertex 0: tangent
+	0.0f, 0.0f,			// vertex 0: texture coordinate
+	1.0f, -1.0f, 0.0f,	// vertex 1: position
+	0.0f, 0.0f, 1.0f,	// vertex 1: normal
+	1.0f, 0.0f, 0.0f,	// vertex 1: tangent
+	1.0f, 0.0f,			// vertex 1: texture coordinate
+	-1.0f, 1.0f, 0.0f,	// vertex 2: position
+	0.0f, 0.0f, 1.0f,	// vertex 2: normal
+	1.0f, 0.0f, 0.0f,	// vertex 2: tangent
+	0.0f, 1.0f,			// vertex 2: texture coordinate
+	1.0f, 1.0f, 0.0f,	// vertex 3: position
+	0.0f, 0.0f, 1.0f,	// vertex 3: normal
+	1.0f, 0.0f, 0.0f,	// vertex 3: tangent
+	1.0f, 1.0f,			// vertex 3: texture coordinate
+};
+
+void Draw_Walls();
 
 
+/*
+
+ Section for the Lines
+
+*/
+
+ShaderProgram Line_Shaderprogram;
+Camera main_camera;
+glm::mat4 Line_Modelmatrix;
+
+std::vector<GLfloat> line_vertices = {
+	// lines
+		0.0f, 400.0f, 0.0f,		// line 1 vertex 0: position
+		1.0f, 1.0f, 1.0f,		// line 1 vertex 0: colour
+		800.0f, 400.0f, 0.0f,	// line 1 vertex 1: position
+		1.0f, 1.0f, 1.0f,		// line 1 vertex 1: colour
+		400.0f, 0.0f, 0.0f,		// line 2 vertex 0: position
+		1.0f, 1.0f, 1.0f,		// line 2 vertex 0: colour
+		400.0f, 800.0f, 0.0f,	// line 2 vertex 1: position
+		1.0f, 1.0f, 1.0f,		// line 2 vertex 1: colour
+};
+
+void Draw_Lines();
 
 #endif

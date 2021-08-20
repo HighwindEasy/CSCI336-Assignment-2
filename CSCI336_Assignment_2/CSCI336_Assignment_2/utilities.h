@@ -46,6 +46,14 @@ struct VertexNormTex2
 	GLfloat texCoord2[2];
 };
 
+struct VertexNormTanTex
+{
+	GLfloat position[3];
+	GLfloat normal[3];
+	GLfloat tangent[3];
+	GLfloat texCoord[2];
+};
+
 // light properties
 struct Light
 {

@@ -76,5 +76,17 @@
     <None Include="pointLightTexture.frag">
       <Filter>Resource Files</Filter>
     </None>
+    <None Include="color.frag">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="modelViewProj.vert">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="normalMap.frag">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="normalMap.vert">
+      <Filter>Resource Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

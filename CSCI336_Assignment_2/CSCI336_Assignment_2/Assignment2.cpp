@@ -12,6 +12,8 @@ static void init(GLFWwindow* window)
 	gShader.compileAndLink("lighting.vert", "reflection.frag");
 	Cube_envm_Map_Program.compileAndLink("lighting.vert", "lighting_cubemap.frag");
 	Floor_ShaderProgram.compileAndLink("lightingAndTexture.vert", "pointLightTexture.frag");
+	Line_Shaderprogram.compileAndLink("modelViewProj.vert", "color.frag");
+	Walls_Shader_program.compileAndLink("normalMap.vert", "normalMap.frag");
 
 	// initialise view matrix
 	gCamera.setViewMatrix(glm::vec3(0.0f, 2.0f, 4.0f),
@@ -21,9 +23,14 @@ static void init(GLFWwindow* window)
 	gCamera.setProjMatrix(glm::perspective(glm::radians(45.0f),
 		static_cast<float>(gWindowWidth) / gWindowHeight, 0.1f, 10.0f));
 
+	main_camera.setViewMatrix(glm::vec3(0.0f, 0.0f, 3.0f), glm::vec3(0.0f, 0.0f, 0.0f));
+
+	// initialise projection matrix
+	main_camera.setProjMatrix(glm::ortho(0.f, static_cast<float>(gWindowWidth), 0.f, static_cast<float>(gWindowHeight), 0.1f, 10.f));
+
 	// initialise directional light properties
 	gLight.dir = glm::vec3(0.3f, -0.7f, -0.5f);
-	gLight.La = glm::vec3(0.8f);
+	gLight.La = glm::vec3(1.f);
 	gLight.Ld = glm::vec3(1.0f);
 	gLight.Ls = glm::vec3(1.0f);
 	gLight.att = glm::vec3(1.0f, 0.f, 0.f);
@@ -98,6 +105,65 @@ static void init(GLFWwindow* window)
 
 	/* Floor Stuff ends here */
 
+
+	/* Line stuff starts here */
+
+	glBindBuffer(GL_ARRAY_BUFFER, gVBO[1]);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat)* line_vertices.size(), &line_vertices[0], GL_STATIC_DRAW);
+
+	
+	// create VAO, specify VBO data and format of the data
+	glBindVertexArray(gVAO[1]);				// create VAO
+	glBindBuffer(GL_ARRAY_BUFFER, gVBO[1]);	// bind the VBO
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(VertexColor),
+		reinterpret_cast<void*>(offsetof(VertexColor, position)));	// specify format of position data
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(VertexColor),
+		reinterpret_cast<void*>(offsetof(VertexColor, color)));		// specify format of colour data
+
+	glEnableVertexAttribArray(0);	// enable vertex attributes
+	glEnableVertexAttribArray(1);
+
+	/* Line Stuff ends here*/
+
+
+	/* Wall Stuff begins here */
+
+	Walls_Material.Ka = glm::vec3(0.2f);
+	Walls_Material.Kd = glm::vec3(0.2f, 0.7f, 1.0f);
+	Walls_Material.Ks = glm::vec3(0.2f, 0.7f, 1.0f);
+	Walls_Material.shininess = 40.0f;
+
+	Walls_texture["Wall"].generate("./images/Tile4.bmp");
+	Walls_texture["WallNormalMap"].generate("./Tile4BumpDOT3.bmp");
+
+	int counter = 1;
+	for (int i = 0; i < 4; i++)
+	{
+		Walls_Model_Matrix[i] = glm::mat4(1.f);
+		glBindBuffer(GL_ARRAY_BUFFER, gVBO[i + 2]);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * Walls_Vertices.size(), &Walls_Vertices[0], GL_STATIC_DRAW);
+
+		// create VAO, specify VBO data and format of the data
+		glBindVertexArray(gVAO[i + 2]);				// create VAO
+		glBindBuffer(GL_ARRAY_BUFFER, gVBO[i + 2]);	// bind the VBO
+
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(VertexNormTanTex),
+			reinterpret_cast<void*>(offsetof(VertexNormTanTex, position)));		// specify format of position data
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(VertexNormTanTex),
+			reinterpret_cast<void*>(offsetof(VertexNormTanTex, normal)));		// specify format of colour data
+		glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(VertexNormTanTex),
+			reinterpret_cast<void*>(offsetof(VertexNormTanTex, tangent)));		// specify format of tangent data
+		glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, sizeof(VertexNormTanTex),
+			reinterpret_cast<void*>(offsetof(VertexNormTanTex, texCoord)));		// specify format of texture coordinate data
+
+		glEnableVertexAttribArray(0);	// enable vertex attributes
+		glEnableVertexAttribArray(1);
+		glEnableVertexAttribArray(2);
+		glEnableVertexAttribArray(3);
+	}
+
+
+	/* Wall Stuff ends here */
 }
 
 // function used to update the scene
@@ -119,6 +185,9 @@ static void update_scene(GLFWwindow* window)
 
 	// update camera position and direction
 	gCamera.update(moveForward, moveRight);
+
+	Walls_Model_Matrix[3] = glm::translate(glm::vec3(0, 0, 0)) * glm::rotate(glm::radians(90.f), glm::vec3(1, 0, 0)) * glm::scale(glm::vec3(2, 2, 1));
+
 }
 
 void Draw_Cube_Environment_Map()
@@ -198,6 +267,63 @@ void Draw_Floor()
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);	// render the vertices
 }
 
+void Draw_Lines()
+{
+	Line_Shaderprogram.use();
+	glBindVertexArray(gVAO[1]);
+
+	glm::mat4 MVP;
+	MVP = main_camera.getProjMatrix() * main_camera.getViewMatrix();
+
+	Line_Shaderprogram.setUniform("uModelViewProjectionMatrix", MVP);
+	glDrawArrays(GL_LINES, 0 , 4);
+
+}
+
+void Draw_Walls()
+{
+	for (int counter = 0; counter < 4; counter++)
+	{
+		Walls_Shader_program.use();
+
+
+		Walls_Shader_program.setUniform("uLight.pos", gLight.pos);
+		Walls_Shader_program.setUniform("uLight.La", gLight.La);
+		Walls_Shader_program.setUniform("uLight.Ld", gLight.Ld);
+		Walls_Shader_program.setUniform("uLight.Ls", gLight.Ls);
+		Walls_Shader_program.setUniform("uLight.att", gLight.att);
+
+		Walls_Shader_program.setUniform("uMaterial.Ka", Walls_Material.Ka);
+		Walls_Shader_program.setUniform("uMaterial.Kd", Walls_Material.Kd);
+		Walls_Shader_program.setUniform("uMaterial.Ks", Walls_Material.Ks);
+		Walls_Shader_program.setUniform("uMaterial.shininess", Walls_Material.shininess);
+
+		Walls_Shader_program.setUniform("uViewpoint", glm::vec3(0.0f, 0.0f, 4.0f));
+
+		glm::mat4 MVP = gCamera.getProjMatrix() * gCamera.getViewMatrix() * Walls_Model_Matrix[counter];
+		glm::mat3 normalMatrix = glm::mat3(glm::transpose(glm::inverse(Walls_Model_Matrix[counter])));
+
+		// set uniform variables
+		Walls_Shader_program.setUniform("uModelViewProjectionMatrix", MVP);
+		Walls_Shader_program.setUniform("uModelMatrix", Walls_Model_Matrix[counter]);
+		Walls_Shader_program.setUniform("uNormalMatrix", normalMatrix);
+
+		// set texture and normal map
+		gShader.setUniform("uTextureSampler", 0);
+		gShader.setUniform("uNormalSampler", 1);
+
+		glActiveTexture(GL_TEXTURE0);
+		Walls_texture["Wall"].bind();
+
+		glActiveTexture(GL_TEXTURE1);
+		Walls_texture["WallNormalMap"].bind();
+
+		glBindVertexArray(gVAO[counter + 2]);				// make VAO active
+		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);	// render the vertices
+	}
+
+	
+}
 
 // function to render the scene
 static void render_scene()
@@ -217,6 +343,16 @@ static void render_scene()
 	Draw_Cube_Environment_Map();
 	Draw_Floor();
 
+
+
+	//Top-down view
+	glViewport(400, 400, 400, 400);
+	Draw_Cube_Environment_Map();
+	Draw_Floor();
+	Draw_Walls();
+
+	glViewport(0, 0, 800, 800);
+	Draw_Lines();
 	// flush the graphics pipeline
 	glFlush();
 }
