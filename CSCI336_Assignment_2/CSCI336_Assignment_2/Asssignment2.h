@@ -20,11 +20,13 @@ float gFrameTime = 1 / gFrameRate;
 // scene content
 ShaderProgram gShader;	// shader program object
 
-const int index_for_VBO_VAO = 6;
+const int index_for_VBO_VAO = 7;
 GLuint gVBO[index_for_VBO_VAO];		// vertex buffer object identifier
 GLuint gVAO[index_for_VBO_VAO];		// vertex array object identifier
 
 Camera gCamera;					// camera object
+Camera fCamera;
+Camera tCamera;
 std::map<std::string, glm::mat4> gModelMatrix;	// object matrix
 
 Light gLight;					// light properties
@@ -47,10 +49,11 @@ glm::mat4 Cube_ModelMatrix;
 Material Cube_Material;
 SimpleModel Cube_Model;
 Texture Cube_envm_Map;
-float RotateX;
+bool rotationtime = false;
+float RotateX = 1;
 
 
-void Draw_Cube_Environment_Map();
+void Draw_Cube_Environment_Map(std::string camera);
 
 /*
 
@@ -78,7 +81,7 @@ std::vector<GLfloat> Floor_Vertices =
 	1.0f, 1.0f,			// vertex 3: texture coordinate
 };
 
-void Draw_Floor();
+void Draw_Floor(std::string camera);
 
 /*
 
@@ -111,7 +114,7 @@ std::vector<GLfloat> Walls_Vertices =
 	1.0f, 1.0f,			// vertex 3: texture coordinate
 };
 
-void Draw_Walls();
+void Draw_Walls(std::string camera);
 
 
 /*
@@ -136,6 +139,36 @@ std::vector<GLfloat> line_vertices = {
 		1.0f, 1.0f, 1.0f,		// line 2 vertex 1: colour
 };
 
+
 void Draw_Lines();
+
+/*
+
+ This section is for the painting
+
+*/
+
+ShaderProgram Painting_SP;
+glm::mat4 Painting_ModelMatrix;
+Material Painting_Material;
+Texture Paint_Texture;
+
+std::vector<GLfloat> Paint_Vertices =
+{
+	-1.0f, 0.0f, 1.0f,	// vertex 0: position
+	0.0f, 1.0f, 0.0f,	// vertex 0: normal
+	0.0f, 0.0f,			// vertex 0: texture coordinate
+	1.0f, 0.0f, 1.0f,	// vertex 1: position
+	0.0f, 1.0f, 0.0f,	// vertex 1: normal
+	1.0f, 0.0f,			// vertex 1: texture coordinate
+	-1.0f, 0.0f, -1.0f,	// vertex 2: position
+	0.0f, 1.0f, 0.0f,	// vertex 2: normal
+	0.0f, 1.0f,			// vertex 2: texture coordinate
+	1.0f, 0.0f, -1.0f,	// vertex 3: position
+	0.0f, 1.0f, 0.0f,	// vertex 3: normal
+	1.0f, 1.0f,			// vertex 3: texture coordinate
+};
+
+void Draw_Painting(std::string camera);
 
 #endif

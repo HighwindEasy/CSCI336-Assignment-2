@@ -14,14 +14,27 @@ static void init(GLFWwindow* window)
 	Floor_ShaderProgram.compileAndLink("lightingAndTexture.vert", "pointLightTexture.frag");
 	Line_Shaderprogram.compileAndLink("modelViewProj.vert", "color.frag");
 	Walls_Shader_program.compileAndLink("normalMap.vert", "normalMap.frag");
+	Painting_SP.compileAndLink("lightingAndTexture.vert", "pointLightTexture.frag");
 
 	// initialise view matrix
-	gCamera.setViewMatrix(glm::vec3(0.0f, 2.0f, 4.0f),
+	gCamera.setViewMatrix(glm::vec3(0.0f, 2.0f, 3.0f),
 		glm::vec3(0.0f, 0.0f, 0.0f));
 
 	// initialise projection matrix
 	gCamera.setProjMatrix(glm::perspective(glm::radians(45.0f),
-		static_cast<float>(gWindowWidth) / gWindowHeight, 0.1f, 10.0f));
+		static_cast<float>(gWindowWidth) / gWindowHeight, 0.1f, 100.0f));
+
+	fCamera.setViewMatrix(glm::vec3(0.0f, 2.0f, 3.0f),
+		glm::vec3(0.0f, 2.0f, 1.0f));
+
+	// initialise projection matrix
+	fCamera.setProjMatrix(glm::ortho(-1.0f, 1.0f, -1.0f, 1.0f, 0.1f, 100.0f));
+
+	tCamera.setViewMatrix(glm::vec3(0.0f, 5.0f, 3.0f),
+		glm::vec3(0.0f, 0.0f, 0.0f));
+
+	// initialise projection matrix
+	tCamera.setProjMatrix(glm::ortho(-1.0f, 1.0f, -1.0f, 1.0f, 0.1f, 100.0f));
 
 	main_camera.setViewMatrix(glm::vec3(0.0f, 0.0f, 3.0f), glm::vec3(0.0f, 0.0f, 0.0f));
 
@@ -35,20 +48,6 @@ static void init(GLFWwindow* window)
 	gLight.Ls = glm::vec3(1.0f);
 	gLight.att = glm::vec3(1.0f, 0.f, 0.f);
 
-	// initialise material properties
-	gMaterial["Floor"].Ka = glm::vec3(0.2f);
-	gMaterial["Floor"].Kd = glm::vec3(0.2f, 0.7f, 1.0f);
-	gMaterial["Floor"].Ks = glm::vec3(0.2f, 0.7f, 1.0f);
-	gMaterial["Floor"].shininess = 40.0f;
-
-	gMaterial["Cube"].Ka = glm::vec3(0.2f);
-	gMaterial["Cube"].Kd = glm::vec3(1.0f, 0.7f, 0.2f);
-	gMaterial["Cube"].Ks = glm::vec3(1.0f, 0.7f, 0.2f);
-	gMaterial["Cube"].shininess = 10.0f;
-
-	// initialise model matrices
-	gModelMatrix["Floor"] = glm::mat4(1.0f);
-	gModelMatrix["Cube"] = glm::translate(glm::vec3(-1.0f, 0.5f, 0.0f)) * glm::scale(glm::vec3(0.5f, 0.5f, 0.5f));
 
 	// load model
 	gModel.loadModel("./models/cube.obj");
@@ -164,6 +163,36 @@ static void init(GLFWwindow* window)
 
 
 	/* Wall Stuff ends here */
+
+
+	/* Painting Stuff starts here */
+
+	Painting_ModelMatrix = glm::mat4(1.f);
+
+	Painting_Material.Ka = glm::vec3(0.25f, 0.21f, 0.21f);
+	Painting_Material.Kd = glm::vec3(1.0f, 0.83f, 0.83f);
+	Painting_Material.Ks = glm::vec3(0.3f, 0.3f, 0.3f);
+	Painting_Material.shininess = 11.3f;
+
+	Paint_Texture.generate("./images/Smile.bmp");
+
+	glBindBuffer(GL_ARRAY_BUFFER, gVBO[6]);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * Paint_Vertices.size(), &Paint_Vertices[0], GL_STATIC_DRAW);
+	glBindVertexArray(gVAO[6]);
+	glBindBuffer(GL_ARRAY_BUFFER, gVBO[6]);
+
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(VertexNormTex),
+		reinterpret_cast<void*>(offsetof(VertexNormTex, position)));	// specify format of position data
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(VertexNormTex),
+		reinterpret_cast<void*>(offsetof(VertexNormTex, normal)));		// specify format of colour data
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(VertexNormTex),
+		reinterpret_cast<void*>(offsetof(VertexNormTex, texCoord)));	// specify format of texture coordinate data
+
+	glEnableVertexAttribArray(0);	// enable vertex attributes
+	glEnableVertexAttribArray(1);
+	glEnableVertexAttribArray(2);
+
+	/* Painting Stuff ends here */
 }
 
 // function used to update the scene
@@ -183,14 +212,25 @@ static void update_scene(GLFWwindow* window)
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
 		moveRight += gCamMoveSensitivity * gFrameTime;
 
+	if (rotationtime)
+	{
+		RotateX++;
+	}
+
 	// update camera position and direction
 	gCamera.update(moveForward, moveRight);
 
-	Walls_Model_Matrix[3] = glm::translate(glm::vec3(0, 0, 0)) * glm::rotate(glm::radians(90.f), glm::vec3(1, 0, 0)) * glm::scale(glm::vec3(2, 2, 1));
 
+	Floor_ModelMatrix = glm::translate(glm::vec3(0, 0, 0)) *  glm::scale(glm::vec3(5, 1, 5));
+	Walls_Model_Matrix[0] = glm::translate(glm::vec3(5, 5, 0)) * glm::rotate(glm::radians(90.f), glm::vec3(0, 1, 0)) * glm::scale(glm::vec3(5, 5, 1));
+	Walls_Model_Matrix[1] = glm::translate(glm::vec3(-5, 5, 0)) * glm::rotate(glm::radians(90.f), glm::vec3(0, 1, 0)) * glm::scale(glm::vec3(5, 5, 1));
+	Walls_Model_Matrix[2] = glm::translate(glm::vec3(0, 5, -5)) * glm::scale(glm::vec3(5, 5, 1));
+	Walls_Model_Matrix[3] = glm::translate(glm::vec3(0, 5, 5)) * glm::scale(glm::vec3(5, 5, 1));
+	Cube_ModelMatrix = glm::translate(glm::vec3(0, 1, 0)) * glm::rotate(glm::radians(90.f), glm::vec3(1, 0, 0)) * glm::rotate(glm::radians(RotateX), glm::vec3(1, 0, 0));
+	Painting_ModelMatrix = glm::translate(glm::vec3(0, 2, -4.9f)) * glm::rotate(glm::radians(90.f), glm::vec3(1, 0, 0)) * glm::scale(glm::vec3(2, 2, 2));
 }
 
-void Draw_Cube_Environment_Map()
+void Draw_Cube_Environment_Map(std::string camera)
 {
 	Cube_envm_Map_Program.use();
 
@@ -209,7 +249,20 @@ void Draw_Cube_Environment_Map()
 	// set viewing position
 	Cube_envm_Map_Program.setUniform("uViewpoint", gCamera.getPosition());
 
-	glm::mat4 MVP = gCamera.getProjMatrix() * gCamera.getViewMatrix() * Cube_ModelMatrix;
+	glm::mat4 MVP;
+	if (camera == "Right")
+	{
+		MVP = gCamera.getProjMatrix() * gCamera.getViewMatrix() * Cube_ModelMatrix;
+	}
+	else if (camera == "Left")
+	{
+		MVP = fCamera.getProjMatrix() * fCamera.getViewMatrix() * Cube_ModelMatrix;
+	}
+	else
+	{
+		MVP = tCamera.getProjMatrix() * tCamera.getViewMatrix() * Cube_ModelMatrix;
+	}
+	
 	glm::mat3 normalMatrix = glm::mat3(glm::transpose(glm::inverse(Cube_ModelMatrix)));
 
 	// set uniform variables
@@ -228,7 +281,7 @@ void Draw_Cube_Environment_Map()
 
 }
 
-void Draw_Floor()
+void Draw_Floor(std::string camera)
 {
 	Floor_ShaderProgram.use();
 
@@ -249,7 +302,20 @@ void Draw_Floor()
 	Floor_ShaderProgram.setUniform("uViewpoint", glm::vec3(0.0f, 2.0f, 4.0f));
 
 	// calculate matrices
-	glm::mat4 MVP = gCamera.getProjMatrix() * gCamera.getViewMatrix() * Floor_ModelMatrix;
+	glm::mat4 MVP;
+	if (camera == "Right")
+	{
+		MVP = gCamera.getProjMatrix() * gCamera.getViewMatrix() * Floor_ModelMatrix;
+	}
+	else if (camera == "Left")
+	{
+		MVP = fCamera.getProjMatrix() * fCamera.getViewMatrix() * Floor_ModelMatrix;
+	}
+	else
+	{
+		MVP = tCamera.getProjMatrix() * tCamera.getViewMatrix() * Floor_ModelMatrix;
+	}
+
 	glm::mat3 normalMatrix = glm::mat3(glm::transpose(glm::inverse(Floor_ModelMatrix)));
 
 	// set uniform variables
@@ -258,7 +324,7 @@ void Draw_Floor()
 	Floor_ShaderProgram.setUniform("uNormalMatrix", normalMatrix);
 
 	// set texture
-	gShader.setUniform("uTextureSampler", 0);
+	Floor_ShaderProgram.setUniform("uTextureSampler", 0);
 
 	glActiveTexture(GL_TEXTURE0);
 	Floor_Texture.bind();
@@ -280,7 +346,7 @@ void Draw_Lines()
 
 }
 
-void Draw_Walls()
+void Draw_Walls(std::string camera)
 {
 	for (int counter = 0; counter < 4; counter++)
 	{
@@ -300,7 +366,19 @@ void Draw_Walls()
 
 		Walls_Shader_program.setUniform("uViewpoint", glm::vec3(0.0f, 0.0f, 4.0f));
 
-		glm::mat4 MVP = gCamera.getProjMatrix() * gCamera.getViewMatrix() * Walls_Model_Matrix[counter];
+		glm::mat4 MVP;
+		if (camera == "Right")
+		{
+			MVP = gCamera.getProjMatrix() * gCamera.getViewMatrix() * Walls_Model_Matrix[counter];
+		}
+		else if (camera == "Left")
+		{
+			MVP = fCamera.getProjMatrix() * fCamera.getViewMatrix() * Walls_Model_Matrix[counter];
+		}
+		else
+		{
+			MVP = tCamera.getProjMatrix() * tCamera.getViewMatrix() * Walls_Model_Matrix[counter];
+		}
 		glm::mat3 normalMatrix = glm::mat3(glm::transpose(glm::inverse(Walls_Model_Matrix[counter])));
 
 		// set uniform variables
@@ -309,8 +387,8 @@ void Draw_Walls()
 		Walls_Shader_program.setUniform("uNormalMatrix", normalMatrix);
 
 		// set texture and normal map
-		gShader.setUniform("uTextureSampler", 0);
-		gShader.setUniform("uNormalSampler", 1);
+		Walls_Shader_program.setUniform("uTextureSampler", 0);
+		Walls_Shader_program.setUniform("uNormalSampler", 1);
 
 		glActiveTexture(GL_TEXTURE0);
 		Walls_texture["Wall"].bind();
@@ -325,6 +403,57 @@ void Draw_Walls()
 	
 }
 
+void Draw_Painting(std::string camera)
+{
+	Painting_SP.use();
+
+	// set light properties
+	Painting_SP.setUniform("uLight.pos", gLight.pos);
+	Painting_SP.setUniform("uLight.La", gLight.La);
+	Painting_SP.setUniform("uLight.Ld", gLight.Ld);
+	Painting_SP.setUniform("uLight.Ls", gLight.Ls);
+	Painting_SP.setUniform("uLight.att", gLight.att);
+
+	// set material properties
+	Painting_SP.setUniform("uMaterial.Ka", Painting_Material.Ka);
+	Painting_SP.setUniform("uMaterial.Kd", Painting_Material.Kd);
+	Painting_SP.setUniform("uMaterial.Ks", Painting_Material.Ks);
+	Painting_SP.setUniform("uMaterial.shininess", Painting_Material.shininess);
+
+	// set viewing position
+	Floor_ShaderProgram.setUniform("uViewpoint", glm::vec3(0.0f, 2.0f, 4.0f));
+
+	// calculate matrices
+	glm::mat4 MVP;
+	if (camera == "Right")
+	{
+		MVP = gCamera.getProjMatrix() * gCamera.getViewMatrix() * Painting_ModelMatrix;
+	}
+	else if (camera == "Left")
+	{
+		MVP = fCamera.getProjMatrix() * fCamera.getViewMatrix() * Painting_ModelMatrix;
+	}
+	else
+	{
+		MVP = tCamera.getProjMatrix() * tCamera.getViewMatrix() * Painting_ModelMatrix;
+	}
+	glm::mat3 normalMatrix = glm::mat3(glm::transpose(glm::inverse(Painting_ModelMatrix)));
+
+	// set uniform variables
+	Painting_SP.setUniform("uModelViewProjectionMatrix", MVP);
+	Painting_SP.setUniform("uModelMatrix", Floor_ModelMatrix);
+	Painting_SP.setUniform("uNormalMatrix", normalMatrix);
+
+	// set texture
+	Painting_SP.setUniform("uTextureSampler", 0);
+
+	glActiveTexture(GL_TEXTURE0);
+	Paint_Texture.bind();
+
+	glBindVertexArray(gVAO[6]);				// make VAO active
+	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);	// render the vertices
+}
+
 // function to render the scene
 static void render_scene()
 {
@@ -333,6 +462,18 @@ static void render_scene()
 	 ************************************************************************************/
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
+	glViewport(0, 0, 400, 400);
+
+	/************************************************************************************
+	 * Draw the scene
+	 ************************************************************************************/
+
+
+	Draw_Cube_Environment_Map("Left");
+	Draw_Floor("Left");
+	Draw_Walls("Left");
+	Draw_Painting("Left");
+
 	glViewport(400, 0, 400, 400);
 
 	/************************************************************************************
@@ -340,16 +481,19 @@ static void render_scene()
 	 ************************************************************************************/
 	
 
-	Draw_Cube_Environment_Map();
-	Draw_Floor();
+	Draw_Cube_Environment_Map("Right");
+	Draw_Floor("Right");
+	Draw_Walls("Right");
+	Draw_Painting("Right");
 
 
 
 	//Top-down view
 	glViewport(400, 400, 400, 400);
-	Draw_Cube_Environment_Map();
-	Draw_Floor();
-	Draw_Walls();
+	Draw_Cube_Environment_Map("Top");
+	Draw_Floor("Top");
+	Draw_Walls("Top");
+	Draw_Painting("Top");
 
 	glViewport(0, 0, 800, 800);
 	Draw_Lines();
@@ -439,14 +583,17 @@ TwBar* create_UI(const std::string name)
 	// scene controls
 	TwAddVarRW(twBar, "Wireframe", TW_TYPE_BOOLCPP, &gWireframe, " group='Controls' ");
 
+	TwAddVarRW(twBar, "Rotation", TW_TYPE_BOOLCPP, &rotationtime, " group='Controls' ");
+
 	// light control
-	TwAddVarRW(twBar, "Position X", TW_TYPE_FLOAT, &gLight.pos.x, " group='Light' min=-3 max=3 step=0.01 ");
-	TwAddVarRW(twBar, "Position Y", TW_TYPE_FLOAT, &gLight.pos.y, " group='Light' min=-3 max=3 step=0.01 ");
-	TwAddVarRW(twBar, "Position Z", TW_TYPE_FLOAT, &gLight.pos.z, " group='Light' min=-3 max=3 step=0.01 ");
+	TwAddVarRW(twBar, "Direction", TW_TYPE_DIR3F, &gLight.dir, " group='Light' opened=true ");
+	// light controls
+	TwAddVarRW(twBar, "Position X", TW_TYPE_FLOAT, &gLight.pos.x, " group='Light' min=-3.0 max=3.0 step=0.01 ");
+	TwAddVarRW(twBar, "Position Y", TW_TYPE_FLOAT, &gLight.pos.y, " group='Light' min=-3.0 max=3.0 step=0.01 ");
+	TwAddVarRW(twBar, "Position Z", TW_TYPE_FLOAT, &gLight.pos.z, " group='Light' min=-3.0 max=3.0 step=0.01 ");
 
-	// reflective amount
-	TwAddVarRW(twBar, "Blend", TW_TYPE_FLOAT, &gAlpha, " group='Reflection' min=0.2 max=1 step=0.01 ");
 
+	
 	return twBar;
 }
 
@@ -470,7 +617,7 @@ int main(void)
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 	// create a window and its OpenGL context
-	window = glfwCreateWindow(gWindowWidth, gWindowHeight, "Lab", nullptr, nullptr);
+	window = glfwCreateWindow(gWindowWidth, gWindowHeight, "7060853, Nathan Chia", nullptr, nullptr);
 
 	// check if window created successfully
 	if (window == nullptr)
